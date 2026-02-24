@@ -17,7 +17,7 @@ class PlgContentGacetaflipbook extends CMSPlugin
     /**
      * Replace shortcode tags.
      *
-     * Supported tags: {gacetaflip ...}, {gacetaflipbook ...}, {openleaf ...}
+     * Supported tags: {gacetaflip ...}, {gacetaflipbook ...}, {openleaf ...}, {openleaf}
      */
     public function onContentPrepare($context, &$article, &$params, $page = 0)
     {
@@ -35,14 +35,14 @@ class PlgContentGacetaflipbook extends CMSPlugin
             return true;
         }
 
-        $regex = '/{\s*(gacetaflip|gacetaflipbook|openleaf)\s+([^}]*)}/i';
+        $regex = '/{\s*(gacetaflip|gacetaflipbook|openleaf)(?:\s+([^}]*))?}/i';
 
         if (!preg_match_all($regex, $article->text, $matches, PREG_SET_ORDER)) {
             return true;
         }
 
         foreach ($matches as $match) {
-            $tagParams = $this->parseTagParameters((string) $match[2]);
+            $tagParams = $this->parseTagParameters((string) ($match[2] ?? ''));
             $replacement = $this->renderFlipbook($tagParams);
             $article->text = preg_replace('/' . preg_quote($match[0], '/') . '/', addcslashes($replacement, '\\$'), $article->text, 1);
         }
@@ -96,10 +96,10 @@ class PlgContentGacetaflipbook extends CMSPlugin
      */
     private function renderEmbedMode(array $tagParams): string
     {
-        $url = trim((string) ($tagParams['url'] ?? $tagParams['src'] ?? ''));
+        $url = trim((string) ($tagParams['url'] ?? $tagParams['src'] ?? $this->params->get('default_embed_url', '')));
 
         if ($url === '') {
-            return '<p class="gacetaflip-error">OpenLeaf Gazette: missing <code>url</code> in <code>embed</code> mode.</p>';
+            return '<p class="gacetaflip-error">OpenLeaf Gazette: missing <code>url</code> in <code>embed</code> mode. Configure <strong>Default embed URL</strong> in plugin settings or pass <code>url="..."</code>.</p>';
         }
 
         $safeUrl = $this->normalizeEmbedUrl($url);
@@ -156,10 +156,10 @@ class PlgContentGacetaflipbook extends CMSPlugin
      */
     private function renderNativeMode(array $tagParams): string
     {
-        $file = trim((string) ($tagParams['file'] ?? $tagParams['pdf'] ?? ''));
+        $file = trim((string) ($tagParams['file'] ?? $tagParams['pdf'] ?? $this->params->get('default_pdf_file', '')));
 
         if ($file === '') {
-            return '<p class="gacetaflip-error">OpenLeaf Gazette: missing <code>file</code> in <code>native</code> mode.</p>';
+            return '<p class="gacetaflip-error">OpenLeaf Gazette: missing <code>file</code> in <code>native</code> mode. Configure <strong>Default PDF file</strong> in plugin settings or pass <code>file="..."</code>.</p>';
         }
 
         $fileUrl = $this->normalizeFileUrl($file);

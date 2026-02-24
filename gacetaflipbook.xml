@@ -7,10 +7,10 @@
     <license>MIT License</license>
     <authorEmail>opensource@ucips.edu</authorEmail>
     <authorUrl>https://ucips.edu</authorUrl>
-    <version>1.1.2</version>
+    <version>1.2.0</version>
     <description>
         Open-source Joomla content plugin for the UCIPS digital gazette.
-        Shortcodes: {gacetaflip ...} and {openleaf ...}
+        Shortcodes: {gacetaflip ...}, {openleaf ...}, and {openleaf}
         Modes: embed (external viewer URL) and native (self-hosted PDF flipbook).
     </description>
 
@@ -34,6 +34,19 @@
                     <option value="native">Native (PDF autohospedado)</option>
                     <option value="embed">Embed (URL externa)</option>
                 </field>
+                <field
+                    name="default_pdf_file"
+                    type="media"
+                    label="PDF por defecto (desde Admin)"
+                    description="Selecciona un PDF desde Media Manager para usar {openleaf} sin parametros."
+                    directory="images"
+                />
+                <field
+                    name="default_embed_url"
+                    type="url"
+                    label="Embed URL por defecto"
+                    description="URL externa para modo embed cuando uses {openleaf} sin url."
+                />
                 <field
                     name="default_width"
                     type="number"
