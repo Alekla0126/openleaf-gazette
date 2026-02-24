@@ -15,7 +15,7 @@
    - `PDF por defecto (desde Admin)`: selecciona tu PDF en Media Manager
    - `Modo visual por defecto (native)`: `Screen`
    - `Intentar fullscreen automaticamente`: `No`
-   - `Mostrar boton descargar (native)`: `No`
+   - `Mostrar boton descargar (native)`: `Si`
 3. Guarda.
 
 Con esto, el shortcode minimo funciona sin poner ruta del PDF:
@@ -37,5 +37,5 @@ Con esto, el shortcode minimo funciona sin poner ruta del PDF:
 ## 4) Ejemplo con parametros manuales
 
 ```text
-{openleaf mode="native" file="images/pdfs/ucips-gazette-base3f-27012026-prueba.pdf" fit="screen" autofullscreen="0" download="0"}
+{openleaf mode="native" file="images/pdfs/ucips-gazette-base3f-27012026-prueba.pdf" fit="screen" autofullscreen="0" download="1"}
 ```

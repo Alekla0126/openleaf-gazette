@@ -210,8 +210,8 @@ class PlgContentGacetaflipbook extends CMSPlugin
         );
 
         $showDownload = $this->normalizeBool(
-            (string) ($tagParams['download'] ?? $this->params->get('show_download', 0)),
-            false
+            (string) ($tagParams['download'] ?? $this->params->get('show_download', 1)),
+            true
         );
 
         $updateHash = $this->normalizeBool(
