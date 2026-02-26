@@ -6,6 +6,7 @@
 
 defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Uri\Uri;
 
@@ -43,7 +44,7 @@ class PlgContentGacetaflipbook extends CMSPlugin
 
         foreach ($matches as $match) {
             $tagParams = $this->parseTagParameters((string) ($match[2] ?? ''));
-            $replacement = $this->renderFlipbook($tagParams);
+            $replacement = $this->renderFlipbook($tagParams, (string) $context, $article);
             $article->text = preg_replace('/' . preg_quote($match[0], '/') . '/', addcslashes($replacement, '\\$'), $article->text, 1);
         }
 
@@ -71,7 +72,7 @@ class PlgContentGacetaflipbook extends CMSPlugin
     /**
      * Build final HTML for one instance.
      */
-    private function renderFlipbook(array $tagParams): string
+    private function renderFlipbook(array $tagParams, string $context, $article): string
     {
         $mode = strtolower(trim((string) ($tagParams['mode'] ?? (string) $this->params->get('default_mode', 'native'))));
         if ($mode !== 'embed' && $mode !== 'native') {
@@ -88,7 +89,7 @@ class PlgContentGacetaflipbook extends CMSPlugin
             return $assets . $this->renderEmbedMode($tagParams);
         }
 
-        return $assets . $this->renderNativeMode($tagParams);
+        return $assets . $this->renderNativeMode($tagParams, $context, $article);
     }
 
     /**
@@ -154,12 +155,12 @@ class PlgContentGacetaflipbook extends CMSPlugin
     /**
      * Self-hosted flipbook mode based on PDF.js + StPageFlip.
      */
-    private function renderNativeMode(array $tagParams): string
+    private function renderNativeMode(array $tagParams, string $context, $article): string
     {
-        $file = trim((string) ($tagParams['file'] ?? $tagParams['pdf'] ?? $this->params->get('default_pdf_file', '')));
+        $file = $this->resolveNativePdfFile($tagParams, $context, $article);
 
         if ($file === '') {
-            return '<p class="gacetaflip-error">OpenLeaf Gazette: missing <code>file</code> in <code>native</code> mode. Configure <strong>Default PDF file</strong> in plugin settings or pass <code>file="..."</code>.</p>';
+            return '<p class="gacetaflip-error">OpenLeaf Gazette: missing <code>file</code> in <code>native</code> mode. Configure <strong>Default PDF file</strong>, add entries in <strong>PDF map by section</strong>, or pass <code>file="..."</code>.</p>';
         }
 
         $fileUrl = $this->normalizeFileUrl($file);
@@ -249,6 +250,134 @@ class PlgContentGacetaflipbook extends CMSPlugin
             . ' data-autofullscreen="' . ($autoFullscreen ? '1' : '0') . '"'
             . '></div>'
             . '</div>';
+    }
+
+    /**
+     * Resolve native PDF source with precedence:
+     * shortcode file/pdf > shortcode section/key map > Itemid map > category map > context/default map > default PDF.
+     */
+    private function resolveNativePdfFile(array $tagParams, string $context, $article): string
+    {
+        $directFile = trim((string) ($tagParams['file'] ?? $tagParams['pdf'] ?? ''));
+        if ($directFile !== '') {
+            return $directFile;
+        }
+
+        $mappedFile = $this->resolvePdfFromMap($tagParams, $context, $article);
+        if ($mappedFile !== '') {
+            return $mappedFile;
+        }
+
+        return trim((string) $this->params->get('default_pdf_file', ''));
+    }
+
+    /**
+     * Resolve PDF path from plugin config map.
+     */
+    private function resolvePdfFromMap(array $tagParams, string $context, $article): string
+    {
+        $map = $this->getConfiguredPdfMap();
+        if ($map === []) {
+            return '';
+        }
+
+        $sectionKey = strtolower(trim((string) ($tagParams['section'] ?? $tagParams['key'] ?? '')));
+        if ($sectionKey !== '' && isset($map[$sectionKey])) {
+            return $map[$sectionKey];
+        }
+
+        $app = Factory::getApplication();
+        $itemid = (int) $app->input->getInt('Itemid', 0);
+        if ($itemid > 0) {
+            foreach (['itemid:' . $itemid, 'menu:' . $itemid] as $itemidKey) {
+                if (isset($map[$itemidKey])) {
+                    return $map[$itemidKey];
+                }
+            }
+        }
+
+        $categoryId = $this->resolveArticleCategoryId($article);
+        if ($categoryId > 0) {
+            foreach (['catid:' . $categoryId, 'category:' . $categoryId] as $categoryKey) {
+                if (isset($map[$categoryKey])) {
+                    return $map[$categoryKey];
+                }
+            }
+        }
+
+        $normalizedContext = strtolower(trim($context));
+        if ($normalizedContext !== '' && isset($map['context:' . $normalizedContext])) {
+            return $map['context:' . $normalizedContext];
+        }
+
+        if (isset($map['default'])) {
+            return $map['default'];
+        }
+
+        if (isset($map['*'])) {
+            return $map['*'];
+        }
+
+        return '';
+    }
+
+    /**
+     * Parse mapping lines from plugin config.
+     *
+     * Accepted formats per line:
+     * - key=value
+     * - key|value
+     */
+    private function getConfiguredPdfMap(): array
+    {
+        $rawMap = (string) $this->params->get('section_pdf_map', '');
+        if (trim($rawMap) === '') {
+            return [];
+        }
+
+        $lines = preg_split('/\R/u', $rawMap) ?: [];
+        $map = [];
+
+        foreach ($lines as $line) {
+            $line = trim((string) $line);
+            if ($line === '' || strpos($line, '#') === 0 || strpos($line, ';') === 0) {
+                continue;
+            }
+
+            $separatorPosition = strpos($line, '=');
+            if ($separatorPosition === false) {
+                $separatorPosition = strpos($line, '|');
+            }
+
+            if ($separatorPosition === false) {
+                continue;
+            }
+
+            $key = strtolower(trim(substr($line, 0, $separatorPosition)));
+            $value = trim(substr($line, $separatorPosition + 1));
+
+            if ($key === '' || $value === '') {
+                continue;
+            }
+
+            $map[$key] = $value;
+        }
+
+        return $map;
+    }
+
+    /**
+     * Best-effort article category detection for automatic catid mapping.
+     */
+    private function resolveArticleCategoryId($article): int
+    {
+        if (!is_object($article) || !property_exists($article, 'catid') || !is_numeric($article->catid)) {
+            return 0;
+        }
+
+        $catid = (int) $article->catid;
+
+        return $catid > 0 ? $catid : 0;
     }
 
     /**

@@ -2,16 +2,17 @@
 <extension version="5.0" type="plugin" group="content" method="upgrade">
     <name>Content - OpenLeaf Gazette</name>
     <author>UCIPS Open Source Community</author>
-    <creationDate>2026-02-24</creationDate>
+    <creationDate>2026-02-25</creationDate>
     <copyright>(C) 2026</copyright>
     <license>MIT License</license>
     <authorEmail>opensource@ucips.edu</authorEmail>
     <authorUrl>https://ucips.edu</authorUrl>
-    <version>1.2.1</version>
+    <version>1.3.0</version>
     <description>
         Open-source Joomla content plugin for the UCIPS digital gazette.
         Shortcodes: {gacetaflip ...}, {openleaf ...}, and {openleaf}
         Modes: embed (external viewer URL) and native (self-hosted PDF flipbook).
+        Includes PDF-by-section mapping from plugin settings.
     </description>
 
     <files>
@@ -40,6 +41,14 @@
                     label="PDF por defecto (desde Admin)"
                     description="Selecciona un PDF desde Media Manager para usar {openleaf} sin parametros."
                     directory="images"
+                />
+                <field
+                    name="section_pdf_map"
+                    type="textarea"
+                    label="Mapeo PDF por seccion (opcional)"
+                    description="Una linea por mapeo. Formato: clave=ruta_pdf. Puedes usar claves libres para shortcode (ej: revista-2026=images/pdfs/revista-2026.pdf), itemid:ID/menu:ID para secciones de menu, catid:ID/category:ID para categorias y default o * como fallback."
+                    rows="8"
+                    filter="raw"
                 />
                 <field
                     name="default_embed_url"
